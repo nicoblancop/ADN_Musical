@@ -21,6 +21,9 @@
         /* Animation */
         .fade-in { animation: fadeIn 0.5s ease-in; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Modal Animation */
+        .modal-enter { animation: modalIn 0.3s ease-out forwards; }
+        @keyframes modalIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
     </style>
 </head>
 <body class="p-6">
@@ -92,7 +95,7 @@
         <div class="mb-8">
             <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
                 <span class="w-2 h-8 bg-spotify-green rounded-full inline-block"></span>
-                Your Headliners
+                Your Headliners <span class="text-xs text-gray-500 font-normal ml-2">(Click for stats)</span>
             </h3>
             <div id="artists-gallery" class="flex gap-6 overflow-x-auto pb-4 scroll-smooth">
                 <!-- Artist Circles Injected Here -->
@@ -115,6 +118,35 @@
             <div class="card p-6 rounded-xl border border-[#282828]">
                 <h3 class="font-bold mb-4 text-gray-300">Top Tracks</h3>
                 <div id="tracks-list" class="space-y-2 h-72 overflow-y-auto pr-2">
+                    <!-- Tracks injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ARTIST MODAL -->
+    <div id="artist-modal" class="fixed inset-0 bg-black bg-opacity-90 hidden items-center justify-center z-50 p-4 backdrop-blur-sm" onclick="closeModal(event)">
+        <div class="bg-[#181818] w-full max-w-2xl rounded-2xl shadow-2xl border border-[#333] overflow-hidden modal-enter" onclick="event.stopPropagation()">
+            <!-- Modal Header -->
+            <div class="relative h-40 bg-gradient-to-b from-[#1DB954] to-[#181818] p-6 flex items-end">
+                <button onclick="closeModal()" class="absolute top-4 right-4 text-white hover:text-gray-300 text-2xl font-bold">&times;</button>
+                <div class="flex items-end gap-4 translate-y-8">
+                    <img id="modal-img" src="" class="w-32 h-32 rounded-full shadow-2xl border-4 border-[#181818] object-cover bg-[#282828]">
+                    <div class="mb-2">
+                        <h2 id="modal-name" class="text-3xl font-black text-white shadow-black drop-shadow-md">Artist Name</h2>
+                        <p id="modal-followers" class="text-sm text-gray-300 font-mono">0 Followers</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Modal Content -->
+            <div class="pt-12 p-6">
+                <div class="flex gap-2 mb-6 flex-wrap" id="modal-genres">
+                    <!-- Genres injected here -->
+                </div>
+                
+                <h3 class="font-bold text-gray-300 mb-4 border-b border-[#333] pb-2">Popular Tracks</h3>
+                <div id="modal-tracks" class="space-y-2 max-h-60 overflow-y-auto pr-2">
                     <!-- Tracks injected here -->
                 </div>
             </div>
@@ -211,13 +243,20 @@
                 logout(); // Token expired
                 return null;
             }
+            if (!res.ok) {
+                console.error("Spotify API Error:", res.status, res.statusText);
+                return null;
+            }
             return res.json();
         }
 
         async function getUserProfile() {
             const profile = await callSpotify('me');
             if (profile) {
-                document.getElementById('user-name-title').textContent = `${profile.display_name}'s Profile`;
+                const name = profile.display_name;
+                document.getElementById('user-name-title').textContent = `${name}'s Profile`;
+                document.title = `${name}'s Music DNA`; // Update Browser Tab Title
+                
                 if(profile.images.length > 0) {
                     const img = document.getElementById('user-img');
                     img.src = profile.images[0].url;
@@ -238,87 +277,143 @@
             // 1. TOP ARTISTS
             const artists = await callSpotify(`me/top/artists?limit=20&time_range=${timeRange}`);
             
-            // Artist Gallery
-            const gallery = document.getElementById('artists-gallery');
-            gallery.innerHTML = artists.items.map(a => `
-                <div class="flex flex-col items-center min-w-[100px] group cursor-pointer">
-                    <img src="${a.images[0]?.url}" class="w-24 h-24 rounded-full object-cover shadow-lg group-hover:scale-105 transition border-2 border-transparent group-hover:border-[#1DB954]">
-                    <p class="text-xs font-bold mt-3 text-center truncate w-24 group-hover:text-[#1DB954]">${a.name}</p>
-                </div>
-            `).join('');
+            if (artists && artists.items) {
+                const gallery = document.getElementById('artists-gallery');
+                gallery.innerHTML = artists.items.map(a => `
+                    <div onclick="openArtistModal('${a.id}')" class="flex flex-col items-center min-w-[100px] group cursor-pointer relative">
+                        <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded-full transition z-10"></div>
+                        <img src="${a.images[0]?.url}" class="w-24 h-24 rounded-full object-cover shadow-lg group-hover:scale-105 transition border-2 border-transparent group-hover:border-[#1DB954]">
+                        <p class="text-xs font-bold mt-3 text-center truncate w-24 group-hover:text-[#1DB954]">${a.name}</p>
+                    </div>
+                `).join('');
 
-            // Metrics
-            const avgPop = artists.items.reduce((sum, a) => sum + a.popularity, 0) / artists.items.length;
-            document.getElementById('obscurity-score').textContent = Math.round(100 - avgPop);
-            
-            const genres = artists.items.flatMap(a => a.genres);
-            const topGenre = genres.sort((a,b) => genres.filter(v => v===a).length - genres.filter(v => v===b).length).pop();
-            document.getElementById('top-genre').textContent = topGenre || "N/A";
+                // Metrics
+                const avgPop = artists.items.reduce((sum, a) => sum + a.popularity, 0) / artists.items.length;
+                document.getElementById('obscurity-score').textContent = Math.round(100 - avgPop);
+                
+                const genres = artists.items.flatMap(a => a.genres);
+                const topGenre = genres.sort((a,b) => genres.filter(v => v===a).length - genres.filter(v => v===b).length).pop();
+                document.getElementById('top-genre').textContent = topGenre || "N/A";
+            }
 
             // 2. TOP TRACKS
             const tracks = await callSpotify(`me/top/tracks?limit=50&time_range=${timeRange}`);
             
-            // List
-            const list = document.getElementById('tracks-list');
-            list.innerHTML = tracks.items.slice(0, 10).map((t, i) => `
-                <div class="flex items-center p-3 hover:bg-[#333] rounded-lg group transition">
-                    <span class="text-[#1DB954] w-8 font-black text-lg">${i+1}</span>
-                    <img src="${t.album.images[2].url}" class="w-12 h-12 rounded shadow mr-4">
-                    <div class="overflow-hidden">
-                        <div class="truncate font-bold text-white group-hover:text-[#1DB954] transition">${t.name}</div>
-                        <div class="truncate text-xs text-gray-400">${t.artists[0].name}</div>
+            if (tracks && tracks.items && tracks.items.length > 0) {
+                // List
+                const list = document.getElementById('tracks-list');
+                list.innerHTML = tracks.items.slice(0, 10).map((t, i) => `
+                    <div class="flex items-center p-3 hover:bg-[#333] rounded-lg group transition">
+                        <span class="text-[#1DB954] w-8 font-black text-lg">${i+1}</span>
+                        <img src="${t.album.images[2]?.url || ''}" class="w-12 h-12 rounded shadow mr-4 bg-[#282828]">
+                        <div class="overflow-hidden">
+                            <div class="truncate font-bold text-white group-hover:text-[#1DB954] transition">${t.name}</div>
+                            <div class="truncate text-xs text-gray-400">${t.artists[0].name}</div>
+                        </div>
                     </div>
-                </div>
-            `).join('');
+                `).join('');
 
-            // NEW INSIGHTS
-            // Explicit %
-            const explicitCount = tracks.items.filter(t => t.explicit).length;
-            const explicitPct = Math.round((explicitCount / tracks.items.length) * 100);
-            document.getElementById('explicit-score').textContent = `${explicitPct}%`;
+                // NEW INSIGHTS
+                const explicitCount = tracks.items.filter(t => t.explicit).length;
+                const explicitPct = Math.round((explicitCount / tracks.items.length) * 100);
+                document.getElementById('explicit-score').textContent = `${explicitPct}%`;
 
-            // Avg Year
-            const years = tracks.items.map(t => parseInt(t.album.release_date.substring(0, 4)));
-            const avgYear = Math.round(years.reduce((a, b) => a + b, 0) / years.length);
-            document.getElementById('avg-year').textContent = avgYear;
+                const years = tracks.items.map(t => parseInt(t.album.release_date.substring(0, 4))).filter(y => !isNaN(y));
+                const avgYear = years.length ? Math.round(years.reduce((a, b) => a + b, 0) / years.length) : "--";
+                document.getElementById('avg-year').textContent = avgYear;
 
-            // 3. AUDIO FEATURES
-            const ids = tracks.items.map(t => t.id).join(',');
-            const features = await callSpotify(`audio-features?ids=${ids}`);
-            
-            // Filter nulls (Fix for broken data)
-            const validFeatures = features.audio_features.filter(f => f !== null);
-            
-            if (validFeatures.length > 0) {
-                const avgs = { danceability:0, energy:0, valence:0, acousticness:0, speechiness:0 };
-                validFeatures.forEach(f => {
-                    avgs.danceability += f.danceability;
-                    avgs.energy += f.energy;
-                    avgs.valence += f.valence;
-                    avgs.acousticness += f.acousticness;
-                    avgs.speechiness += f.speechiness;
-                });
-                const count = validFeatures.length;
-                
-                // Vibe Check
-                const valenceScore = avgs.valence / count;
-                const energyScore = avgs.energy / count;
-                let mood = "Chill ☁️";
-                if (valenceScore > 0.6 && energyScore > 0.6) mood = "Party 🎉";
-                else if (valenceScore < 0.4 && energyScore < 0.4) mood = "Melancholic 🌧️";
-                else if (valenceScore > 0.6) mood = "Happy 🌞";
-                else if (energyScore > 0.7) mood = "Intense 🔥";
-                
-                document.getElementById('vibe-check').textContent = mood;
-                document.getElementById('vibe-desc').textContent = `${Math.round(valenceScore * 100)}% Positivity`;
+                // 3. AUDIO FEATURES
+                const ids = tracks.items.map(t => t.id).join(',');
+                if (ids) {
+                    const features = await callSpotify(`audio-features?ids=${ids}`);
+                    
+                    if (features && features.audio_features) {
+                        // Filter nulls (Fix for broken data)
+                        const validFeatures = features.audio_features.filter(f => f !== null);
+                        
+                        if (validFeatures.length > 0) {
+                            const avgs = { danceability:0, energy:0, valence:0, acousticness:0, speechiness:0 };
+                            validFeatures.forEach(f => {
+                                avgs.danceability += f.danceability;
+                                avgs.energy += f.energy;
+                                avgs.valence += f.valence;
+                                avgs.acousticness += f.acousticness;
+                                avgs.speechiness += f.speechiness;
+                            });
+                            const count = validFeatures.length;
+                            
+                            const valenceScore = avgs.valence / count;
+                            const energyScore = avgs.energy / count;
+                            let mood = "Chill ☁️";
+                            if (valenceScore > 0.6 && energyScore > 0.6) mood = "Party 🎉";
+                            else if (valenceScore < 0.4 && energyScore < 0.4) mood = "Melancholic 🌧️";
+                            else if (valenceScore > 0.6) mood = "Happy 🌞";
+                            else if (energyScore > 0.7) mood = "Intense 🔥";
+                            
+                            document.getElementById('vibe-check').textContent = mood;
+                            document.getElementById('vibe-desc').textContent = `${Math.round(valenceScore * 100)}% Positivity`;
 
-                renderChart([
-                    avgs.danceability/count, avgs.energy/count, avgs.valence/count, 
-                    avgs.acousticness/count, avgs.speechiness/count
-                ]);
+                            renderChart([
+                                avgs.danceability/count, avgs.energy/count, avgs.valence/count, 
+                                avgs.acousticness/count, avgs.speechiness/count
+                            ]);
+                        }
+                    }
+                }
+            } else {
+                console.warn("No tracks found");
+                document.getElementById('vibe-check').textContent = "No Data";
+                document.getElementById('tracks-list').innerHTML = "<p class='text-gray-500 p-4'>No top tracks found for this period.</p>";
             }
         }
 
+        // --- MODAL LOGIC ---
+        async function openArtistModal(artistId) {
+            const modal = document.getElementById('artist-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            // 1. Get Artist Details
+            const artist = await callSpotify(`artists/${artistId}`);
+            if(artist) {
+                document.getElementById('modal-name').textContent = artist.name;
+                document.getElementById('modal-followers').textContent = `${artist.followers.total.toLocaleString()} Followers`;
+                document.getElementById('modal-img').src = artist.images[0]?.url || '';
+                
+                const genresDiv = document.getElementById('modal-genres');
+                genresDiv.innerHTML = artist.genres.map(g => 
+                    `<span class="px-3 py-1 bg-[#333] rounded-full text-xs font-bold text-gray-300 capitalize border border-[#444]">${g}</span>`
+                ).join('');
+            }
+
+            // 2. Get Top Tracks (Market=US required)
+            const tracks = await callSpotify(`artists/${artistId}/top-tracks?market=US`);
+            if(tracks && tracks.tracks) {
+                const trackDiv = document.getElementById('modal-tracks');
+                trackDiv.innerHTML = tracks.tracks.slice(0, 10).map((t, i) => `
+                    <div class="flex items-center justify-between p-2 hover:bg-[#333] rounded group">
+                        <div class="flex items-center gap-3 overflow-hidden">
+                            <span class="text-gray-500 font-mono w-4 text-center">${i+1}</span>
+                            <img src="${t.album.images[2]?.url}" class="w-10 h-10 rounded">
+                            <div class="truncate">
+                                <p class="text-sm font-bold text-white group-hover:text-[#1DB954] transition">${t.name}</p>
+                                <p class="text-[10px] text-gray-400">${t.album.name}</p>
+                            </div>
+                        </div>
+                        <div class="text-xs font-bold text-gray-500">${t.popularity}%</div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function closeModal(event) {
+            if (event && event.target !== event.currentTarget) return; // Only close if clicking backdrop or close button
+            const modal = document.getElementById('artist-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        // --- CHART ---
         let myChart = null;
         function renderChart(data) {
             const ctx = document.getElementById('radarChart').getContext('2d');
@@ -358,7 +453,7 @@
         function showDashboard() {
             document.getElementById('login-section').classList.add('hidden');
             document.getElementById('dashboard-section').classList.remove('hidden');
-            getUserProfile(); // Fetch name
+            getUserProfile(); 
             fetchData('medium_term');
         }
 
