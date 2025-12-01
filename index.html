@@ -67,9 +67,9 @@
                 </div>
             </div>
             <div class="flex flex-wrap gap-2 mt-6 md:mt-0 justify-end">
-                <button onclick="fetchData('short_term')" class="time-btn px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider bg-[#222] hover:bg-[#333] text-gray-400 transition">4 Weeks</button>
-                <button onclick="fetchData('medium_term')" class="time-btn px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider bg-white text-black transition shadow-lg">6 Months</button>
-                <button onclick="fetchData('long_term')" class="time-btn px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider bg-[#222] hover:bg-[#333] text-gray-400 transition">Lifetime</button>
+                <button id="btn-short" onclick="fetchData('short_term')" class="time-btn px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider bg-[#222] hover:bg-[#333] text-gray-400 transition">4 Weeks</button>
+                <button id="btn-medium" onclick="fetchData('medium_term')" class="time-btn px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider bg-white text-black transition shadow-lg">6 Months</button>
+                <button id="btn-long" onclick="fetchData('long_term')" class="time-btn px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider bg-[#222] hover:bg-[#333] text-gray-400 transition">Lifetime</button>
                 <button onclick="logout()" class="ml-2 px-4 py-2 text-xs text-red-400 hover:text-red-300 font-bold uppercase tracking-widest border border-red-900/30 rounded-full hover:bg-red-900/10 transition">Logout</button>
             </div>
         </div>
@@ -209,16 +209,16 @@
                 </div>
                 <!-- Bars -->
                 <div>
-                    <div class="flex justify-between text-xs mb-1"><span class="text-gray-400">Danceability</span><span id="tm-dance-val"></span></div>
-                    <div class="w-full bg-[#333] rounded-full h-1.5"><div id="tm-dance-bar" class="bg-blue-400 h-1.5 rounded-full" style="width: 0%"></div></div>
+                    <div class="flex justify-between text-xs mb-1"><span class="text-gray-400">Danceability</span><span id="tm-dance-val">--</span></div>
+                    <div class="w-full bg-[#333] rounded-full h-1.5"><div id="tm-dance-bar" class="bg-blue-400 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div></div>
                 </div>
                 <div>
-                    <div class="flex justify-between text-xs mb-1"><span class="text-gray-400">Energy</span><span id="tm-energy-val"></span></div>
-                    <div class="w-full bg-[#333] rounded-full h-1.5"><div id="tm-energy-bar" class="bg-yellow-400 h-1.5 rounded-full" style="width: 0%"></div></div>
+                    <div class="flex justify-between text-xs mb-1"><span class="text-gray-400">Energy</span><span id="tm-energy-val">--</span></div>
+                    <div class="w-full bg-[#333] rounded-full h-1.5"><div id="tm-energy-bar" class="bg-yellow-400 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div></div>
                 </div>
                 <div>
-                    <div class="flex justify-between text-xs mb-1"><span class="text-gray-400">Positivity</span><span id="tm-val-val"></span></div>
-                    <div class="w-full bg-[#333] rounded-full h-1.5"><div id="tm-val-bar" class="bg-[#1DB954] h-1.5 rounded-full" style="width: 0%"></div></div>
+                    <div class="flex justify-between text-xs mb-1"><span class="text-gray-400">Positivity</span><span id="tm-val-val">--</span></div>
+                    <div class="w-full bg-[#333] rounded-full h-1.5"><div id="tm-val-bar" class="bg-[#1DB954] h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div></div>
                 </div>
             </div>
         </div>
@@ -338,13 +338,28 @@
         }
 
         async function fetchData(timeRange) {
-            // UI Toggle
+            // UI Toggle Logic with Safety Check
+            const btnMap = {
+                'short_term': 'btn-short',
+                'medium_term': 'btn-medium',
+                'long_term': 'btn-long'
+            };
+            
+            // Reset all buttons
             document.querySelectorAll('.time-btn').forEach(btn => {
                 btn.classList.remove('bg-white', 'text-black');
                 btn.classList.add('bg-[#222]', 'text-gray-400');
             });
-            event.target.classList.remove('bg-[#222]', 'text-gray-400');
-            event.target.classList.add('bg-white', 'text-black');
+
+            // Highlight active button (if triggered by click)
+            const activeBtnId = btnMap[timeRange];
+            if (activeBtnId) {
+                const activeBtn = document.getElementById(activeBtnId);
+                if (activeBtn) {
+                    activeBtn.classList.remove('bg-[#222]', 'text-gray-400');
+                    activeBtn.classList.add('bg-white', 'text-black');
+                }
+            }
 
             // 1. TOP ARTISTS
             const artists = await callSpotify(`me/top/artists?limit=20&time_range=${timeRange}`);
@@ -379,7 +394,8 @@
                 document.getElementById('explicit-score').textContent = `${explicitPct}%`;
 
                 // 3. AUDIO FEATURES (FIXED)
-                const ids = tracksData.items.map(t => t.id).join(',');
+                // Filter IDs to ensure we don't send nulls or empty strings
+                const ids = tracksData.items.map(t => t.id).filter(id => id).join(',');
                 let validFeatures = [];
 
                 if (ids) {
@@ -567,15 +583,32 @@
             }
         }
 
-        function openTrackModal(trackId) {
+        async function openTrackModal(trackId) {
             const track = globalTracks.find(t => t.id === trackId);
-            const features = globalFeatures[trackId];
             
+            // RESET MODAL UI
+            document.getElementById('tm-bpm').textContent = "--";
+            document.getElementById('tm-key').textContent = "--";
+            document.getElementById('tm-dur').textContent = "--";
+            updateBar('tm-dance', 0);
+            updateBar('tm-energy', 0);
+            updateBar('tm-val', 0);
+
             if(track) {
                 document.getElementById('tm-img').src = track.album.images[0]?.url;
                 document.getElementById('tm-name').textContent = track.name;
                 document.getElementById('tm-artist').textContent = track.artists.map(a => a.name).join(', ');
                 
+                // LAZY FETCH if missing from global cache
+                let features = globalFeatures[trackId];
+                if (!features) {
+                    const fData = await callSpotify(`audio-features/${trackId}`);
+                    if (fData) {
+                        features = fData;
+                        globalFeatures[trackId] = fData; // Save for later
+                    }
+                }
+
                 if(features) {
                     const keys = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
                     document.getElementById('tm-bpm').textContent = Math.round(features.tempo);
