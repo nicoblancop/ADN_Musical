@@ -9,145 +9,216 @@
     <!-- Chart.js for Graphs -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { background-color: #121212; color: white; font-family: 'Circular Std', sans-serif; }
+        body { background-color: #000; color: white; font-family: 'Circular Std', -apple-system, BlinkMacSystemFont, sans-serif; }
         .spotify-green { color: #1DB954; }
         .bg-spotify-green { background-color: #1DB954; }
-        .card { background-color: #181818; transition: background-color 0.3s; }
-        .card:hover { background-color: #282828; }
+        .card { background-color: #121212; transition: all 0.3s ease; border: 1px solid #282828; }
+        .card:hover { background-color: #1a1a1a; border-color: #3e3e3e; transform: translateY(-2px); }
         /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #121212; }
-        ::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #666; }
         /* Animation */
-        .fade-in { animation: fadeIn 0.5s ease-in; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         /* Modal Animation */
-        .modal-enter { animation: modalIn 0.3s ease-out forwards; }
-        @keyframes modalIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .modal-enter { animation: modalIn 0.2s ease-out forwards; }
+        @keyframes modalIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
     </style>
 </head>
-<body class="p-6">
+<body class="p-4 md:p-8 min-h-screen">
 
     <!-- LOGIN SECTION -->
-    <div id="login-section" class="flex flex-col items-center justify-center h-screen hidden">
-        <h1 class="text-5xl font-bold mb-8 tracking-tighter">🎧 My Music DNA</h1>
-        <div class="bg-[#181818] p-8 rounded-xl shadow-2xl w-full max-w-md text-center border border-[#282828]">
-            <p class="text-gray-400 mb-6">Enter your Spotify Client ID to unlock your stats.</p>
-            <input type="text" id="clientId" placeholder="Paste Client ID here" class="w-full p-3 mb-6 rounded bg-[#2a2a2a] text-white border border-[#333] focus:border-[#1DB954] outline-none transition">
-            <button onclick="initiateLogin()" class="w-full bg-spotify-green text-black font-bold py-3 rounded-full hover:scale-105 transition transform shadow-lg">
+    <div id="login-section" class="flex flex-col items-center justify-center h-screen hidden fade-in">
+        <h1 class="text-6xl font-black mb-10 tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-[#1DB954] to-white">My Music DNA</h1>
+        <div class="bg-[#121212] p-8 rounded-2xl shadow-2xl w-full max-w-md text-center border border-[#333]">
+            <div class="mb-6">
+                <span class="inline-block p-3 rounded-full bg-[#1DB954] bg-opacity-20 text-[#1DB954] mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.6 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+                </span>
+                <p class="text-gray-400 text-sm">Unlock your listening habits with the Spotify API.</p>
+            </div>
+            
+            <input type="text" id="clientId" placeholder="Paste Client ID" class="w-full p-4 mb-4 rounded-lg bg-[#2a2a2a] text-white border border-[#333] focus:border-[#1DB954] focus:ring-1 focus:ring-[#1DB954] outline-none transition font-mono text-sm">
+            <button onclick="initiateLogin()" class="w-full bg-[#1DB954] hover:bg-[#1ed760] text-black font-bold py-4 rounded-full transition transform hover:scale-[1.02] shadow-lg flex items-center justify-center gap-2">
                 Log in with Spotify
             </button>
-            <p class="text-xs text-gray-500 mt-6">
-                Setup: Add <span id="current-url" class="text-gray-300 font-mono bg-black px-1 rounded"></span> to your Redirect URIs in the Spotify Dashboard.
-            </p>
+            <div class="mt-8 pt-6 border-t border-[#222]">
+                <p class="text-[10px] text-gray-500 uppercase tracking-widest mb-2">Redirect URI Configuration</p>
+                <code id="current-url" class="text-xs text-gray-400 bg-black px-3 py-2 rounded border border-[#333] select-all block break-all"></code>
+            </div>
         </div>
     </div>
 
     <!-- DASHBOARD SECTION -->
-    <div id="dashboard-section" class="hidden max-w-7xl mx-auto fade-in">
+    <div id="dashboard-section" class="hidden max-w-7xl mx-auto fade-in pb-20">
         
         <!-- Header -->
-        <div class="flex flex-col md:flex-row justify-between items-end mb-8 border-b border-[#333] pb-6">
+        <div class="flex flex-col md:flex-row justify-between items-end mb-10 border-b border-[#222] pb-8">
             <div class="flex items-center gap-6">
-                <img id="user-img" src="https://i.scdn.co/image/ab6761610000e5eb55d39ab9c21d506aa72e5139" class="w-20 h-20 rounded-full shadow-lg border-2 border-[#1DB954] hidden object-cover">
+                <img id="user-img" src="" class="w-24 h-24 rounded-full shadow-2xl border-2 border-[#1DB954] hidden object-cover">
                 <div>
-                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Live Dashboard</p>
-                    <h1 id="user-name-title" class="text-4xl md:text-6xl font-black tracking-tight">Your Music Profile</h1>
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                        <p class="text-xs font-bold text-red-500 uppercase tracking-widest">Live Analysis</p>
+                    </div>
+                    <h1 id="user-name-title" class="text-4xl md:text-6xl font-black tracking-tight text-white">Your Music DNA</h1>
                 </div>
             </div>
-            <div class="flex gap-2 mt-4 md:mt-0">
-                <button onclick="fetchData('short_term')" class="time-btn px-6 py-2 rounded-full text-sm font-bold bg-[#333] hover:text-white text-gray-400 transition">Month</button>
-                <button onclick="fetchData('medium_term')" class="time-btn px-6 py-2 rounded-full text-sm font-bold bg-white text-black transition shadow-lg">6 Months</button>
-                <button onclick="fetchData('long_term')" class="time-btn px-6 py-2 rounded-full text-sm font-bold bg-[#333] hover:text-white text-gray-400 transition">All Time</button>
-                <button onclick="logout()" class="ml-4 text-xs text-red-400 hover:text-red-300 font-bold uppercase tracking-widest">Logout</button>
+            <div class="flex flex-wrap gap-2 mt-6 md:mt-0 justify-end">
+                <button onclick="fetchData('short_term')" class="time-btn px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider bg-[#222] hover:bg-[#333] text-gray-400 transition">4 Weeks</button>
+                <button onclick="fetchData('medium_term')" class="time-btn px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider bg-white text-black transition shadow-lg">6 Months</button>
+                <button onclick="fetchData('long_term')" class="time-btn px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider bg-[#222] hover:bg-[#333] text-gray-400 transition">Lifetime</button>
+                <button onclick="logout()" class="ml-2 px-4 py-2 text-xs text-red-400 hover:text-red-300 font-bold uppercase tracking-widest border border-red-900/30 rounded-full hover:bg-red-900/10 transition">Logout</button>
             </div>
         </div>
 
-        <!-- Metric Cards -->
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-            <div class="card p-6 rounded-xl text-center flex flex-col justify-center">
-                <h3 class="text-gray-400 text-xs font-bold uppercase tracking-widest mb-2">Obscurity</h3>
-                <div id="obscurity-score" class="text-4xl font-black text-spotify-green">--</div>
-                <p class="text-[10px] text-gray-500 mt-2">100 = Hipster</p>
+        <!-- 8 Metric Cards Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mb-10">
+            <!-- Obscurity -->
+            <div class="card p-4 rounded-xl text-center">
+                <h3 class="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-2">Obscurity</h3>
+                <div id="obscurity-score" class="text-3xl font-black text-[#1DB954]">--</div>
             </div>
-            <div class="card p-6 rounded-xl text-center flex flex-col justify-center">
-                <h3 class="text-gray-400 text-xs font-bold uppercase tracking-widest mb-2">Vibe</h3>
-                <div id="vibe-check" class="text-2xl font-bold">--</div>
-                <p id="vibe-desc" class="text-[10px] text-gray-500 mt-1">--</p>
+            <!-- Vibe -->
+            <div class="card p-4 rounded-xl text-center col-span-2">
+                <h3 class="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-2">Dominant Vibe</h3>
+                <div id="vibe-check" class="text-2xl font-bold text-white">--</div>
+                <p id="vibe-desc" class="text-[10px] text-gray-500">--</p>
             </div>
-             <div class="card p-6 rounded-xl text-center flex flex-col justify-center">
-                <h3 class="text-gray-400 text-xs font-bold uppercase tracking-widest mb-2">Top Genre</h3>
-                <div id="top-genre" class="text-lg font-bold capitalize leading-tight">--</div>
+            <!-- Top Genre -->
+            <div class="card p-4 rounded-xl text-center col-span-2">
+                <h3 class="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-2">Top Genre</h3>
+                <div id="top-genre" class="text-xl font-bold text-white capitalize truncate px-2">--</div>
             </div>
-            <div class="card p-6 rounded-xl text-center flex flex-col justify-center">
-                <h3 class="text-gray-400 text-xs font-bold uppercase tracking-widest mb-2">Era</h3>
-                <div id="avg-year" class="text-3xl font-bold text-blue-400">--</div>
-                <p class="text-[10px] text-gray-500 mt-2">Avg Release Year</p>
+             <!-- BPM -->
+             <div class="card p-4 rounded-xl text-center">
+                <h3 class="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-2">Avg BPM</h3>
+                <div id="avg-bpm" class="text-3xl font-bold text-purple-400">--</div>
             </div>
-            <div class="card p-6 rounded-xl text-center flex flex-col justify-center">
-                <h3 class="text-gray-400 text-xs font-bold uppercase tracking-widest mb-2">Explicit %</h3>
+            <!-- Explicit -->
+            <div class="card p-4 rounded-xl text-center">
+                <h3 class="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-2">Explicit</h3>
                 <div id="explicit-score" class="text-3xl font-bold text-red-400">--</div>
-                <p class="text-[10px] text-gray-500 mt-2">Lyrical Content</p>
+            </div>
+             <!-- Instrumental -->
+             <div class="card p-4 rounded-xl text-center">
+                <h3 class="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-2">Instr.</h3>
+                <div id="instrumental-score" class="text-3xl font-bold text-blue-400">--</div>
             </div>
         </div>
 
         <!-- Artist Gallery -->
-        <div class="mb-8">
-            <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
-                <span class="w-2 h-8 bg-spotify-green rounded-full inline-block"></span>
-                Your Headliners <span class="text-xs text-gray-500 font-normal ml-2">(Click for stats)</span>
+        <div class="mb-10">
+            <h3 class="text-xl font-bold mb-5 flex items-center gap-3">
+                <span class="w-1.5 h-6 bg-[#1DB954] rounded-full inline-block"></span>
+                Your Headliners <span class="text-xs text-gray-500 font-normal border border-[#333] px-2 py-1 rounded-md ml-2">Click artists for details</span>
             </h3>
-            <div id="artists-gallery" class="flex gap-6 overflow-x-auto pb-4 scroll-smooth">
+            <div id="artists-gallery" class="flex gap-6 overflow-x-auto pb-6 scroll-smooth px-2">
                 <!-- Artist Circles Injected Here -->
             </div>
         </div>
 
         <!-- Main Content Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-10">
             
-            <!-- Radar Chart -->
-            <div class="card p-6 rounded-xl border border-[#282828]">
-                <h3 class="font-bold mb-6 text-gray-300">Audio Signature</h3>
-                <div class="relative h-72 w-full flex items-center justify-center">
+            <!-- Radar Chart (4 cols) -->
+            <div class="lg:col-span-5 card p-6 rounded-xl border border-[#282828] flex flex-col">
+                <h3 class="font-bold mb-6 text-gray-300 uppercase text-xs tracking-widest">Audio Signature</h3>
+                <div class="relative flex-grow flex items-center justify-center min-h-[300px]">
                     <canvas id="radarChart"></canvas>
                 </div>
-                <p class="text-center text-xs text-gray-500 mt-4 italic">Shape indicates your taste profile</p>
             </div>
 
-            <!-- Top Tracks List -->
-            <div class="card p-6 rounded-xl border border-[#282828]">
-                <h3 class="font-bold mb-4 text-gray-300">Top Tracks</h3>
-                <div id="tracks-list" class="space-y-2 h-72 overflow-y-auto pr-2">
+            <!-- Top Tracks List (7 cols) -->
+            <div class="lg:col-span-7 card p-6 rounded-xl border border-[#282828] flex flex-col h-[450px]">
+                <h3 class="font-bold mb-4 text-gray-300 uppercase text-xs tracking-widest flex justify-between">
+                    <span>Top Tracks</span>
+                    <span class="text-[10px] text-gray-500 normal-case">Click tracks for insights</span>
+                </h3>
+                <div id="tracks-list" class="space-y-1 overflow-y-auto pr-2 flex-grow">
                     <!-- Tracks injected here -->
                 </div>
             </div>
         </div>
+
+        <!-- Evolution Chart Section -->
+        <div class="card p-6 md:p-8 rounded-xl border border-[#282828]">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                <div>
+                    <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                        Taste Evolution
+                        <span class="text-xs font-normal text-gray-500 bg-[#222] px-2 py-1 rounded">By Release Year</span>
+                    </h3>
+                    <p class="text-sm text-gray-400 mt-1">See how your preferred music characteristics have changed over time.</p>
+                </div>
+                <select id="evolution-feature" onchange="updateEvolutionChart()" class="bg-[#222] text-white text-sm border border-[#444] rounded-lg px-4 py-2 outline-none focus:border-[#1DB954] transition cursor-pointer">
+                    <option value="valence">Happiness (Valence)</option>
+                    <option value="energy">Energy</option>
+                    <option value="danceability">Danceability</option>
+                    <option value="acousticness">Acousticness</option>
+                    <option value="popularity">Popularity</option>
+                </select>
+            </div>
+            <div class="relative h-80 w-full">
+                <canvas id="evolutionChart"></canvas>
+            </div>
+        </div>
+
     </div>
 
     <!-- ARTIST MODAL -->
-    <div id="artist-modal" class="fixed inset-0 bg-black bg-opacity-90 hidden items-center justify-center z-50 p-4 backdrop-blur-sm" onclick="closeModal(event)">
+    <div id="artist-modal" class="fixed inset-0 bg-black/90 hidden items-center justify-center z-50 p-4 backdrop-blur-md" onclick="closeModal('artist-modal', event)">
         <div class="bg-[#181818] w-full max-w-2xl rounded-2xl shadow-2xl border border-[#333] overflow-hidden modal-enter" onclick="event.stopPropagation()">
-            <!-- Modal Header -->
-            <div class="relative h-40 bg-gradient-to-b from-[#1DB954] to-[#181818] p-6 flex items-end">
-                <button onclick="closeModal()" class="absolute top-4 right-4 text-white hover:text-gray-300 text-2xl font-bold">&times;</button>
-                <div class="flex items-end gap-4 translate-y-8">
-                    <img id="modal-img" src="" class="w-32 h-32 rounded-full shadow-2xl border-4 border-[#181818] object-cover bg-[#282828]">
-                    <div class="mb-2">
-                        <h2 id="modal-name" class="text-3xl font-black text-white shadow-black drop-shadow-md">Artist Name</h2>
-                        <p id="modal-followers" class="text-sm text-gray-300 font-mono">0 Followers</p>
+            <div class="relative h-48 bg-gradient-to-b from-[#444] to-[#181818]">
+                <img id="modal-artist-banner" src="" class="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-overlay">
+                <div class="absolute bottom-0 left-0 p-6 w-full bg-gradient-to-t from-[#181818] to-transparent flex items-end gap-5">
+                    <img id="modal-img" src="" class="w-28 h-28 rounded-full shadow-2xl border-4 border-[#181818] object-cover bg-[#222] relative z-10">
+                    <div class="mb-1 relative z-10">
+                        <h2 id="modal-name" class="text-4xl font-black text-white shadow-black drop-shadow-md leading-none mb-2">Artist Name</h2>
+                        <div class="flex items-center gap-3">
+                            <span id="modal-followers" class="text-xs text-gray-300 font-mono bg-black/50 px-2 py-1 rounded">0 Followers</span>
+                            <span id="modal-pop" class="text-xs text-[#1DB954] font-bold border border-[#1DB954] px-2 py-1 rounded">POPULARITY: 0</span>
+                        </div>
                     </div>
                 </div>
+                <button onclick="closeModal('artist-modal')" class="absolute top-4 right-4 bg-black/50 hover:bg-black/80 text-white rounded-full p-2 transition">&times;</button>
             </div>
-            
-            <!-- Modal Content -->
-            <div class="pt-12 p-6">
-                <div class="flex gap-2 mb-6 flex-wrap" id="modal-genres">
-                    <!-- Genres injected here -->
+            <div class="p-6">
+                <div class="flex gap-2 mb-6 flex-wrap" id="modal-genres"></div>
+                <h3 class="font-bold text-gray-300 mb-4 text-xs uppercase tracking-widest">Top Tracks</h3>
+                <div id="modal-tracks" class="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TRACK MODAL (NEW) -->
+    <div id="track-modal" class="fixed inset-0 bg-black/90 hidden items-center justify-center z-50 p-4 backdrop-blur-md" onclick="closeModal('track-modal', event)">
+        <div class="bg-[#181818] w-full max-w-md rounded-2xl shadow-2xl border border-[#333] overflow-hidden modal-enter" onclick="event.stopPropagation()">
+            <div class="p-6 text-center border-b border-[#222]">
+                <img id="tm-img" src="" class="w-40 h-40 rounded-lg shadow-2xl mx-auto mb-4 border border-[#333]">
+                <h2 id="tm-name" class="text-2xl font-bold text-white mb-1">Track Name</h2>
+                <p id="tm-artist" class="text-gray-400 text-sm">Artist</p>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="grid grid-cols-3 gap-2 text-center mb-4">
+                    <div class="bg-[#222] p-2 rounded-lg"><p class="text-[10px] text-gray-500 uppercase">BPM</p><p id="tm-bpm" class="font-bold text-lg">--</p></div>
+                    <div class="bg-[#222] p-2 rounded-lg"><p class="text-[10px] text-gray-500 uppercase">Key</p><p id="tm-key" class="font-bold text-lg">--</p></div>
+                    <div class="bg-[#222] p-2 rounded-lg"><p class="text-[10px] text-gray-500 uppercase">Duration</p><p id="tm-dur" class="font-bold text-lg">--</p></div>
                 </div>
-                
-                <h3 class="font-bold text-gray-300 mb-4 border-b border-[#333] pb-2">Popular Tracks</h3>
-                <div id="modal-tracks" class="space-y-2 max-h-60 overflow-y-auto pr-2">
-                    <!-- Tracks injected here -->
+                <!-- Bars -->
+                <div>
+                    <div class="flex justify-between text-xs mb-1"><span class="text-gray-400">Danceability</span><span id="tm-dance-val"></span></div>
+                    <div class="w-full bg-[#333] rounded-full h-1.5"><div id="tm-dance-bar" class="bg-blue-400 h-1.5 rounded-full" style="width: 0%"></div></div>
+                </div>
+                <div>
+                    <div class="flex justify-between text-xs mb-1"><span class="text-gray-400">Energy</span><span id="tm-energy-val"></span></div>
+                    <div class="w-full bg-[#333] rounded-full h-1.5"><div id="tm-energy-bar" class="bg-yellow-400 h-1.5 rounded-full" style="width: 0%"></div></div>
+                </div>
+                <div>
+                    <div class="flex justify-between text-xs mb-1"><span class="text-gray-400">Positivity</span><span id="tm-val-val"></span></div>
+                    <div class="w-full bg-[#333] rounded-full h-1.5"><div id="tm-val-bar" class="bg-[#1DB954] h-1.5 rounded-full" style="width: 0%"></div></div>
                 </div>
             </div>
         </div>
@@ -159,6 +230,8 @@
         const SCOPES = "user-top-read user-read-private";
 
         document.getElementById('current-url').textContent = REDIRECT_URI;
+        let globalTracks = []; // Store for evolution chart
+        let globalFeatures = {}; // Store for mapping features to tracks
 
         // --- PKCE HELPERS ---
         function generateRandomString(length) {
@@ -240,11 +313,10 @@
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (res.status === 401) {
-                logout(); // Token expired
+                logout(); 
                 return null;
             }
             if (!res.ok) {
-                console.error("Spotify API Error:", res.status, res.statusText);
                 return null;
             }
             return res.json();
@@ -254,8 +326,8 @@
             const profile = await callSpotify('me');
             if (profile) {
                 const name = profile.display_name;
-                document.getElementById('user-name-title').textContent = `${name}'s Profile`;
-                document.title = `${name}'s Music DNA`; // Update Browser Tab Title
+                document.getElementById('user-name-title').textContent = `${name}'s Music DNA`;
+                document.title = `${name}'s Music DNA`; 
                 
                 if(profile.images.length > 0) {
                     const img = document.getElementById('user-img');
@@ -269,9 +341,9 @@
             // UI Toggle
             document.querySelectorAll('.time-btn').forEach(btn => {
                 btn.classList.remove('bg-white', 'text-black');
-                btn.classList.add('bg-[#333]', 'text-gray-400');
+                btn.classList.add('bg-[#222]', 'text-gray-400');
             });
-            event.target.classList.remove('bg-[#333]', 'text-gray-400');
+            event.target.classList.remove('bg-[#222]', 'text-gray-400');
             event.target.classList.add('bg-white', 'text-black');
 
             // 1. TOP ARTISTS
@@ -283,11 +355,10 @@
                     <div onclick="openArtistModal('${a.id}')" class="flex flex-col items-center min-w-[100px] group cursor-pointer relative">
                         <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded-full transition z-10"></div>
                         <img src="${a.images[0]?.url}" class="w-24 h-24 rounded-full object-cover shadow-lg group-hover:scale-105 transition border-2 border-transparent group-hover:border-[#1DB954]">
-                        <p class="text-xs font-bold mt-3 text-center truncate w-24 group-hover:text-[#1DB954]">${a.name}</p>
+                        <p class="text-xs font-bold mt-3 text-center truncate w-24 group-hover:text-[#1DB954] text-gray-300">${a.name}</p>
                     </div>
                 `).join('');
 
-                // Metrics
                 const avgPop = artists.items.reduce((sum, a) => sum + a.popularity, 0) / artists.items.length;
                 document.getElementById('obscurity-score').textContent = Math.round(100 - avgPop);
                 
@@ -297,125 +368,250 @@
             }
 
             // 2. TOP TRACKS
-            const tracks = await callSpotify(`me/top/tracks?limit=50&time_range=${timeRange}`);
+            const tracksData = await callSpotify(`me/top/tracks?limit=50&time_range=${timeRange}`);
             
-            if (tracks && tracks.items && tracks.items.length > 0) {
-                // List
+            if (tracksData && tracksData.items && tracksData.items.length > 0) {
+                globalTracks = tracksData.items; // Save for evolution chart
+
+                // NEW INSIGHTS
+                const explicitCount = tracksData.items.filter(t => t.explicit).length;
+                const explicitPct = Math.round((explicitCount / tracksData.items.length) * 100);
+                document.getElementById('explicit-score').textContent = `${explicitPct}%`;
+
+                // 3. AUDIO FEATURES (FIXED)
+                const ids = tracksData.items.map(t => t.id).join(',');
+                let validFeatures = [];
+
+                if (ids) {
+                    const featuresData = await callSpotify(`audio-features?ids=${ids}`);
+                    if (featuresData && featuresData.audio_features) {
+                        // Create Map for quick lookup
+                        featuresData.audio_features.forEach(f => {
+                            if(f) globalFeatures[f.id] = f;
+                        });
+                        
+                        validFeatures = featuresData.audio_features.filter(f => f !== null);
+                    }
+                }
+
+                // Render List with click event
                 const list = document.getElementById('tracks-list');
-                list.innerHTML = tracks.items.slice(0, 10).map((t, i) => `
-                    <div class="flex items-center p-3 hover:bg-[#333] rounded-lg group transition">
-                        <span class="text-[#1DB954] w-8 font-black text-lg">${i+1}</span>
-                        <img src="${t.album.images[2]?.url || ''}" class="w-12 h-12 rounded shadow mr-4 bg-[#282828]">
-                        <div class="overflow-hidden">
-                            <div class="truncate font-bold text-white group-hover:text-[#1DB954] transition">${t.name}</div>
-                            <div class="truncate text-xs text-gray-400">${t.artists[0].name}</div>
+                list.innerHTML = tracksData.items.map((t, i) => `
+                    <div onclick="openTrackModal('${t.id}')" class="flex items-center p-2 hover:bg-[#1a1a1a] rounded-lg group transition cursor-pointer border border-transparent hover:border-[#333]">
+                        <span class="text-[#1DB954] w-6 font-bold text-sm text-center">${i+1}</span>
+                        <img src="${t.album.images[2]?.url || ''}" class="w-10 h-10 rounded shadow mr-3 bg-[#282828]">
+                        <div class="overflow-hidden flex-grow">
+                            <div class="truncate font-bold text-white text-sm group-hover:text-[#1DB954] transition">${t.name}</div>
+                            <div class="truncate text-[10px] text-gray-400">${t.artists[0].name}</div>
                         </div>
+                        <div class="text-[10px] text-gray-600 font-mono">${t.album.release_date.substring(0,4)}</div>
                     </div>
                 `).join('');
 
-                // NEW INSIGHTS
-                const explicitCount = tracks.items.filter(t => t.explicit).length;
-                const explicitPct = Math.round((explicitCount / tracks.items.length) * 100);
-                document.getElementById('explicit-score').textContent = `${explicitPct}%`;
-
-                const years = tracks.items.map(t => parseInt(t.album.release_date.substring(0, 4))).filter(y => !isNaN(y));
-                const avgYear = years.length ? Math.round(years.reduce((a, b) => a + b, 0) / years.length) : "--";
-                document.getElementById('avg-year').textContent = avgYear;
-
-                // 3. AUDIO FEATURES
-                const ids = tracks.items.map(t => t.id).join(',');
-                if (ids) {
-                    const features = await callSpotify(`audio-features?ids=${ids}`);
+                // 4. CALCULATE AGGREGATE STATS
+                if (validFeatures.length > 0) {
+                    const avgs = { danceability:0, energy:0, valence:0, acousticness:0, speechiness:0, tempo:0, instrumentalness:0, duration_ms:0 };
                     
-                    if (features && features.audio_features) {
-                        // Filter nulls (Fix for broken data)
-                        const validFeatures = features.audio_features.filter(f => f !== null);
-                        
-                        if (validFeatures.length > 0) {
-                            const avgs = { danceability:0, energy:0, valence:0, acousticness:0, speechiness:0 };
-                            validFeatures.forEach(f => {
-                                avgs.danceability += f.danceability;
-                                avgs.energy += f.energy;
-                                avgs.valence += f.valence;
-                                avgs.acousticness += f.acousticness;
-                                avgs.speechiness += f.speechiness;
-                            });
-                            const count = validFeatures.length;
-                            
-                            const valenceScore = avgs.valence / count;
-                            const energyScore = avgs.energy / count;
-                            let mood = "Chill ☁️";
-                            if (valenceScore > 0.6 && energyScore > 0.6) mood = "Party 🎉";
-                            else if (valenceScore < 0.4 && energyScore < 0.4) mood = "Melancholic 🌧️";
-                            else if (valenceScore > 0.6) mood = "Happy 🌞";
-                            else if (energyScore > 0.7) mood = "Intense 🔥";
-                            
-                            document.getElementById('vibe-check').textContent = mood;
-                            document.getElementById('vibe-desc').textContent = `${Math.round(valenceScore * 100)}% Positivity`;
+                    validFeatures.forEach(f => {
+                        avgs.danceability += f.danceability;
+                        avgs.energy += f.energy;
+                        avgs.valence += f.valence;
+                        avgs.acousticness += f.acousticness;
+                        avgs.speechiness += f.speechiness;
+                        avgs.tempo += f.tempo;
+                        avgs.duration_ms += f.duration_ms;
+                        if (f.instrumentalness > 0.5) avgs.instrumentalness++; 
+                    });
+                    
+                    const count = validFeatures.length;
+                    
+                    // Vibe Check
+                    const valenceScore = avgs.valence / count;
+                    const energyScore = avgs.energy / count;
+                    let mood = "Chill ☁️";
+                    if (valenceScore > 0.6 && energyScore > 0.6) mood = "Party 🎉";
+                    else if (valenceScore < 0.4 && energyScore < 0.4) mood = "Sad 🌧️";
+                    else if (valenceScore > 0.6) mood = "Happy 🌞";
+                    else if (energyScore > 0.7) mood = "Energetic ⚡";
+                    else if (avgs.danceability/count > 0.7) mood = "Dance 💃";
 
-                            renderChart([
-                                avgs.danceability/count, avgs.energy/count, avgs.valence/count, 
-                                avgs.acousticness/count, avgs.speechiness/count
-                            ]);
-                        }
-                    }
+                    document.getElementById('vibe-check').textContent = mood;
+                    document.getElementById('vibe-desc').textContent = `Positivity: ${Math.round(valenceScore * 100)}% • Energy: ${Math.round(energyScore * 100)}%`;
+                    
+                    // New Metrics
+                    document.getElementById('avg-bpm').textContent = Math.round(avgs.tempo / count);
+                    document.getElementById('instrumental-score').textContent = Math.round((avgs.instrumentalness / count) * 100) + "%";
+
+                    renderRadarChart([
+                        avgs.danceability/count, avgs.energy/count, avgs.valence/count, 
+                        avgs.acousticness/count, avgs.speechiness/count
+                    ]);
+
+                    updateEvolutionChart(); // Render Line Chart
                 }
             } else {
-                console.warn("No tracks found");
+                // Empty State
                 document.getElementById('vibe-check').textContent = "No Data";
-                document.getElementById('tracks-list').innerHTML = "<p class='text-gray-500 p-4'>No top tracks found for this period.</p>";
             }
         }
 
-        // --- MODAL LOGIC ---
+        // --- EVOLUTION CHART ---
+        let evolutionChart = null;
+        function updateEvolutionChart() {
+            const feature = document.getElementById('evolution-feature').value;
+            const ctx = document.getElementById('evolutionChart').getContext('2d');
+            
+            // Prepare Data: Sort tracks by release date
+            const sortedTracks = [...globalTracks].sort((a, b) => 
+                new Date(a.album.release_date) - new Date(b.album.release_date)
+            );
+
+            // Filter out tracks without features
+            const dataPoints = [];
+            const labels = [];
+            
+            sortedTracks.forEach(t => {
+                const f = globalFeatures[t.id];
+                if (f || feature === 'popularity') {
+                    let val = 0;
+                    if (feature === 'popularity') val = t.popularity;
+                    else val = f[feature] * 100; // Scale 0-1 to 0-100
+                    
+                    dataPoints.push(val);
+                    labels.push(`${t.album.release_date.substring(0,4)}`);
+                }
+            });
+
+            if (evolutionChart) evolutionChart.destroy();
+
+            // Gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, 'rgba(29, 185, 84, 0.5)');
+            gradient.addColorStop(1, 'rgba(29, 185, 84, 0)');
+
+            evolutionChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: feature.charAt(0).toUpperCase() + feature.slice(1),
+                        data: dataPoints,
+                        borderColor: '#1DB954',
+                        backgroundColor: gradient,
+                        borderWidth: 2,
+                        pointBackgroundColor: '#fff',
+                        pointRadius: 3,
+                        pointHoverRadius: 6,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { intersect: false, mode: 'index' },
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: { 
+                            callbacks: { 
+                                title: (ctx) => {
+                                    const index = ctx[0].dataIndex;
+                                    return sortedTracks[index].name + " (" + labels[index] + ")"; 
+                                }
+                            } 
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, max: 100, grid: { color: '#333' } },
+                        x: { grid: { display: false }, ticks: { maxTicksLimit: 10 } }
+                    }
+                }
+            });
+        }
+
+        // --- MODALS ---
         async function openArtistModal(artistId) {
             const modal = document.getElementById('artist-modal');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
             
-            // 1. Get Artist Details
             const artist = await callSpotify(`artists/${artistId}`);
             if(artist) {
                 document.getElementById('modal-name').textContent = artist.name;
                 document.getElementById('modal-followers').textContent = `${artist.followers.total.toLocaleString()} Followers`;
                 document.getElementById('modal-img').src = artist.images[0]?.url || '';
+                document.getElementById('modal-artist-banner').src = artist.images[0]?.url || '';
+                document.getElementById('modal-pop').textContent = `POPULARITY: ${artist.popularity}`;
                 
                 const genresDiv = document.getElementById('modal-genres');
                 genresDiv.innerHTML = artist.genres.map(g => 
-                    `<span class="px-3 py-1 bg-[#333] rounded-full text-xs font-bold text-gray-300 capitalize border border-[#444]">${g}</span>`
+                    `<span class="px-3 py-1 bg-[#333] rounded-full text-[10px] font-bold text-gray-300 uppercase border border-[#444] tracking-wider">${g}</span>`
                 ).join('');
             }
 
-            // 2. Get Top Tracks (Market=US required)
             const tracks = await callSpotify(`artists/${artistId}/top-tracks?market=US`);
             if(tracks && tracks.tracks) {
                 const trackDiv = document.getElementById('modal-tracks');
                 trackDiv.innerHTML = tracks.tracks.slice(0, 10).map((t, i) => `
-                    <div class="flex items-center justify-between p-2 hover:bg-[#333] rounded group">
+                    <div class="flex items-center justify-between p-2 hover:bg-[#222] rounded group border border-transparent hover:border-[#333]">
                         <div class="flex items-center gap-3 overflow-hidden">
-                            <span class="text-gray-500 font-mono w-4 text-center">${i+1}</span>
-                            <img src="${t.album.images[2]?.url}" class="w-10 h-10 rounded">
+                            <span class="text-gray-500 font-mono w-4 text-center text-xs">${i+1}</span>
+                            <img src="${t.album.images[2]?.url}" class="w-8 h-8 rounded">
                             <div class="truncate">
-                                <p class="text-sm font-bold text-white group-hover:text-[#1DB954] transition">${t.name}</p>
-                                <p class="text-[10px] text-gray-400">${t.album.name}</p>
+                                <p class="text-xs font-bold text-white group-hover:text-[#1DB954] transition">${t.name}</p>
                             </div>
                         </div>
-                        <div class="text-xs font-bold text-gray-500">${t.popularity}%</div>
+                        <div class="text-[10px] font-bold text-gray-500">${t.popularity}</div>
                     </div>
                 `).join('');
             }
         }
 
-        function closeModal(event) {
-            if (event && event.target !== event.currentTarget) return; // Only close if clicking backdrop or close button
-            const modal = document.getElementById('artist-modal');
+        function openTrackModal(trackId) {
+            const track = globalTracks.find(t => t.id === trackId);
+            const features = globalFeatures[trackId];
+            
+            if(track) {
+                document.getElementById('tm-img').src = track.album.images[0]?.url;
+                document.getElementById('tm-name').textContent = track.name;
+                document.getElementById('tm-artist').textContent = track.artists.map(a => a.name).join(', ');
+                
+                if(features) {
+                    const keys = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+                    document.getElementById('tm-bpm').textContent = Math.round(features.tempo);
+                    document.getElementById('tm-key').textContent = keys[features.key] + (features.mode ? " Maj" : " Min");
+                    
+                    const min = Math.floor(features.duration_ms / 60000);
+                    const sec = ((features.duration_ms % 60000) / 1000).toFixed(0);
+                    document.getElementById('tm-dur').textContent = `${min}:${sec < 10 ? '0' : ''}${sec}`;
+
+                    // Update Bars
+                    updateBar('tm-dance', features.danceability);
+                    updateBar('tm-energy', features.energy);
+                    updateBar('tm-val', features.valence);
+                }
+
+                const modal = document.getElementById('track-modal');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+        }
+
+        function updateBar(id, value) {
+            document.getElementById(`${id}-val`).textContent = Math.round(value * 100) + "%";
+            document.getElementById(`${id}-bar`).style.width = (value * 100) + "%";
+        }
+
+        function closeModal(id, event) {
+            if (event && event.target !== event.currentTarget) return;
+            const modal = document.getElementById(id);
             modal.classList.add('hidden');
             modal.classList.remove('flex');
         }
 
-        // --- CHART ---
+        // --- RADAR CHART ---
         let myChart = null;
-        function renderChart(data) {
+        function renderRadarChart(data) {
             const ctx = document.getElementById('radarChart').getContext('2d');
             if(myChart) myChart.destroy();
             
@@ -426,11 +622,12 @@
                     datasets: [{
                         label: 'Stats',
                         data: data,
-                        backgroundColor: 'rgba(29, 185, 84, 0.5)',
+                        backgroundColor: 'rgba(29, 185, 84, 0.4)',
                         borderColor: '#1DB954',
                         borderWidth: 2,
                         pointBackgroundColor: '#fff',
-                        pointBorderColor: '#1DB954'
+                        pointBorderColor: '#1DB954',
+                        pointRadius: 4
                     }]
                 },
                 options: {
@@ -439,7 +636,7 @@
                         r: {
                             angleLines: { color: '#333' },
                             grid: { color: '#333' },
-                            pointLabels: { color: '#aaa', font: { size: 11, family: 'Circular Std' } },
+                            pointLabels: { color: '#bbb', font: { size: 11, weight: 'bold' } },
                             ticks: { display: false, backdropColor: 'transparent' },
                             suggestedMin: 0,
                             suggestedMax: 1
