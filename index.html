@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Music DNA</title>
+    <!-- Tailwind CSS for Styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js for Graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { background-color: #121212; color: white; font-family: 'Circular Std', sans-serif; }
+        .spotify-green { color: #1DB954; }
+        .bg-spotify-green { background-color: #1DB954; }
+        .card { background-color: #181818; transition: background-color 0.3s; }
+        .card:hover { background-color: #282828; }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #121212; }
+        ::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
+    </style>
+</head>
+<body class="p-6">
+
+    <!-- LOGIN SECTION -->
+    <div id="login-section" class="flex flex-col items-center justify-center h-screen hidden">
+        <h1 class="text-4xl font-bold mb-8">🎧 My Music DNA</h1>
+        <div class="bg-[#181818] p-8 rounded-lg shadow-lg w-full max-w-md text-center">
+            <p class="text-gray-400 mb-4">Enter your Client ID to start.</p>
+            <input type="text" id="clientId" placeholder="Paste Client ID here" class="w-full p-3 mb-4 rounded bg-[#333] text-white border border-[#333] focus:border-[#1DB954] outline-none">
+            <button onclick="initiateLogin()" class="w-full bg-spotify-green text-black font-bold py-3 rounded-full hover:scale-105 transition transform">
+                Log in with Spotify
+            </button>
+            <p class="text-xs text-gray-500 mt-4">
+                Note: Add <span id="current-url" class="text-white font-mono"></span> to your Redirect URIs in the Spotify Dashboard.
+            </p>
+        </div>
+    </div>
+
+    <!-- DASHBOARD SECTION -->
+    <div id="dashboard-section" class="hidden max-w-6xl mx-auto">
+        
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <div class="flex items-center gap-4">
+                <img id="profile-img" src="" class="w-12 h-12 rounded-full hidden">
+                <h1 class="text-3xl font-bold">Your Music Profile</h1>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="fetchData('short_term')" class="time-btn px-4 py-1 rounded-full text-sm bg-[#333] hover:text-white text-gray-400">Month</button>
+                <button onclick="fetchData('medium_term')" class="time-btn px-4 py-1 rounded-full text-sm bg-white text-black font-bold">6 Months</button>
+                <button onclick="fetchData('long_term')" class="time-btn px-4 py-1 rounded-full text-sm bg-[#333] hover:text-white text-gray-400">All Time</button>
+                <button onclick="logout()" class="ml-4 text-xs text-red-400 hover:text-red-300">Logout</button>
+            </div>
+        </div>
+
+        <!-- Metrics Row -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div class="card p-6 rounded-lg text-center">
+                <h3 class="text-gray-400 text-sm uppercase tracking-wider mb-2">Obscurity Score</h3>
+                <div id="obscurity-score" class="text-4xl font-bold text-spotify-green">--</div>
+                <p class="text-xs text-gray-500 mt-2">100 = Hipster, 0 = Mainstream</p>
+            </div>
+            <div class="card p-6 rounded-lg text-center">
+                <h3 class="text-gray-400 text-sm uppercase tracking-wider mb-2">Top Genre</h3>
+                <div id="top-genre" class="text-2xl font-bold capitalize">--</div>
+            </div>
+            <div class="card p-6 rounded-lg text-center">
+                <h3 class="text-gray-400 text-sm uppercase tracking-wider mb-2">Vibe Check</h3>
+                <div id="vibe-check" class="text-2xl font-bold">--</div>
+                <p id="vibe-desc" class="text-xs text-gray-500 mt-2">--</p>
+            </div>
+        </div>
+
+        <!-- Charts Area -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            <!-- Radar Chart -->
+            <div class="card p-6 rounded-lg">
+                <h3 class="font-bold mb-4">Audio Features</h3>
+                <div class="relative h-64 w-full">
+                    <canvas id="radarChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Top Tracks List -->
+            <div class="card p-6 rounded-lg">
+                <h3 class="font-bold mb-4">Top Tracks</h3>
+                <div id="tracks-list" class="space-y-3 h-64 overflow-y-auto">
+                    <!-- Tracks injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // --- CONFIG ---
+        // Auto-detect the current URL (works for localhost OR github pages)
+        const REDIRECT_URI = window.location.href.split('?')[0]; 
+        const SCOPES = "user-top-read user-read-private";
+
+        // Display current URL for user convenience
+        document.getElementById('current-url').textContent = REDIRECT_URI;
+
+        // --- PKCE HELPER FUNCTIONS ---
+        function generateRandomString(length) {
+            let text = '';
+            const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            for (let i = 0; i < length; i++) {
+                text += possible.charAt(Math.floor(Math.random() * possible.length));
+            }
+            return text;
+        }
+
+        async function generateCodeChallenge(codeVerifier) {
+            const data = new TextEncoder().encode(codeVerifier);
+            const digest = await window.crypto.subtle.digest('SHA-256', data);
+            return btoa(String.fromCharCode.apply(null, [...new Uint8Array(digest)]))
+                .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        }
+
+        // --- AUTH FLOW ---
+        async function initiateLogin() {
+            const clientId = document.getElementById('clientId').value;
+            if (!clientId) return alert("Please enter a Client ID");
+            
+            localStorage.setItem('spotify_client_id', clientId);
+            
+            const codeVerifier = generateRandomString(128);
+            localStorage.setItem('code_verifier', codeVerifier);
+            
+            const codeChallenge = await generateCodeChallenge(codeVerifier);
+            const state = generateRandomString(16);
+
+            const args = new URLSearchParams({
+                response_type: 'code',
+                client_id: clientId,
+                scope: SCOPES,
+                redirect_uri: REDIRECT_URI,
+                state: state,
+                code_challenge_method: 'S256',
+                code_challenge: codeChallenge
+            });
+
+            window.location = 'https://accounts.spotify.com/authorize?' + args;
+        }
+
+        async function handleTokenExchange(code) {
+            const clientId = localStorage.getItem('spotify_client_id');
+            const codeVerifier = localStorage.getItem('code_verifier');
+
+            const body = new URLSearchParams({
+                grant_type: 'authorization_code',
+                code: code,
+                redirect_uri: REDIRECT_URI,
+                client_id: clientId,
+                code_verifier: codeVerifier
+            });
+
+            const response = await fetch('https://accounts.spotify.com/api/token', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: body
+            });
+
+            if (!response.ok) {
+                alert("Login failed. Check your Redirect URI in Spotify Dashboard.");
+                return;
+            }
+
+            const data = await response.json();
+            localStorage.setItem('access_token', data.access_token);
+            window.history.replaceState({}, document.title, "/"); // Clean URL
+            showDashboard();
+        }
+
+        // --- DATA FETCHING ---
+        async function callSpotify(endpoint) {
+            const token = localStorage.getItem('access_token');
+            const res = await fetch(`https://api.spotify.com/v1/${endpoint}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            return res.json();
+        }
+
+        async function fetchData(timeRange) {
+            // Update buttons state
+            document.querySelectorAll('.time-btn').forEach(btn => {
+                btn.classList.remove('bg-white', 'text-black', 'font-bold');
+                btn.classList.add('bg-[#333]', 'text-gray-400');
+            });
+            event.target.classList.remove('bg-[#333]', 'text-gray-400');
+            event.target.classList.add('bg-white', 'text-black', 'font-bold');
+
+            // 1. Get Top Artists
+            const artists = await callSpotify(`me/top/artists?limit=50&time_range=${timeRange}`);
+            
+            // Calc Obscurity
+            const avgPop = artists.items.reduce((sum, a) => sum + a.popularity, 0) / artists.items.length;
+            document.getElementById('obscurity-score').textContent = Math.round(100 - avgPop);
+            
+            // Calc Top Genre
+            const genres = artists.items.flatMap(a => a.genres);
+            const topGenre = genres.sort((a,b) => genres.filter(v => v===a).length - genres.filter(v => v===b).length).pop();
+            document.getElementById('top-genre').textContent = topGenre || "N/A";
+
+            // 2. Get Top Tracks
+            const tracks = await callSpotify(`me/top/tracks?limit=50&time_range=${timeRange}`);
+            
+            // Render Track List
+            const list = document.getElementById('tracks-list');
+            list.innerHTML = tracks.items.slice(0, 10).map((t, i) => `
+                <div class="flex items-center p-2 hover:bg-[#333] rounded">
+                    <span class="text-gray-500 w-6 font-bold">${i+1}</span>
+                    <img src="${t.album.images[2].url}" class="w-10 h-10 rounded mr-3">
+                    <div class="overflow-hidden">
+                        <div class="truncate font-bold">${t.name}</div>
+                        <div class="truncate text-xs text-gray-400">${t.artists[0].name}</div>
+                    </div>
+                </div>
+            `).join('');
+
+            // 3. Audio Features (Radar Chart)
+            const ids = tracks.items.map(t => t.id).join(',');
+            const features = await callSpotify(`audio-features?ids=${ids}`);
+            
+            const avgs = { danceability:0, energy:0, valence:0, acousticness:0, speechiness:0 };
+            features.audio_features.forEach(f => {
+                avgs.danceability += f.danceability;
+                avgs.energy += f.energy;
+                avgs.valence += f.valence;
+                avgs.acousticness += f.acousticness;
+                avgs.speechiness += f.speechiness;
+            });
+            const count = features.audio_features.length;
+            
+            // Vibe Check
+            const valenceScore = avgs.valence / count;
+            document.getElementById('vibe-check').textContent = valenceScore > 0.5 ? "Happy 🌞" : "Melancholic 🌧️";
+            document.getElementById('vibe-desc').textContent = `${Math.round(valenceScore * 100)}% Positivity`;
+
+            // Render Chart
+            renderChart([
+                avgs.danceability/count, avgs.energy/count, avgs.valence/count, 
+                avgs.acousticness/count, avgs.speechiness/count
+            ]);
+        }
+
+        let myChart = null;
+        function renderChart(data) {
+            const ctx = document.getElementById('radarChart').getContext('2d');
+            if(myChart) myChart.destroy();
+            
+            myChart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Danceability', 'Energy', 'Happiness', 'Acousticness', 'Speechiness'],
+                    datasets: [{
+                        label: 'My Stats',
+                        data: data,
+                        backgroundColor: 'rgba(29, 185, 84, 0.4)',
+                        borderColor: '#1DB954',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#fff'
+                    }]
+                },
+                options: {
+                    scales: {
+                        r: {
+                            angleLines: { color: '#333' },
+                            grid: { color: '#333' },
+                            pointLabels: { color: 'white', font: { size: 12 } },
+                            ticks: { display: false, backdropColor: 'transparent' }
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function showDashboard() {
+            document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('dashboard-section').classList.remove('hidden');
+            fetchData('medium_term');
+        }
+
+        function logout() {
+            localStorage.removeItem('access_token');
+            location.reload();
+        }
+
+        // --- INIT ---
+        window.onload = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+
+            if (code) {
+                handleTokenExchange(code);
+            } else if (localStorage.getItem('access_token')) {
+                showDashboard();
+            } else {
+                document.getElementById('login-section').classList.remove('hidden');
+                // Pre-fill client ID if saved
+                if(localStorage.getItem('spotify_client_id')) {
+                    document.getElementById('clientId').value = localStorage.getItem('spotify_client_id');
+                }
+            }
+        };
+    </script>
+</body>
+</html>
